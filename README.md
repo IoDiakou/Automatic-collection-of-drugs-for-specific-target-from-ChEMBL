@@ -1,4 +1,4 @@
-# Scraping-data-using-the-ChEMBL-database-API
+## Scraping drug-like molecules in SMILES format for a specific target with the CHEMBL db API
 
 ## The background
 

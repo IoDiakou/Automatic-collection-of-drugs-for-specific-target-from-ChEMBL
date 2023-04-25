@@ -1,8 +1,25 @@
 import requests
 import csv
+import os
+import sys
 
-# List of ChEMBL IDs of viral proteases
-chembl_ids = ['CHEMBL2033', 'CHEMBL4297']
+# Check if the correct number of arguments were provided
+if len(sys.argv) != 2:
+    print("Usage: python code.py <input_file_name>")
+    sys.exit()
+
+# Read the input file containing the list of ChEMBL IDs
+input_file_name = sys.argv[1]
+with open(input_file_name, 'r') as f:
+    chembl_ids = [line.strip() for line in f.readlines()]
+
+# Create the output directory
+output_dir = os.path.dirname(os.path.abspath(input_file_name))
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+
+# Create an empty list to store all retrieved data
+all_data = []
 
 # Loop through the ChEMBL IDs
 for chembl_id in chembl_ids:
@@ -24,19 +41,8 @@ for chembl_id in chembl_ids:
                 num_molecules += len(molecules)
                 print(f'Retrieved {len(molecules)} molecules for ChEMBL ID: {chembl_id}, Page: {page+1}')
                 
-                # Save the retrieved data to a CSV file
-                with open('viral_protease_inhibitors.csv', 'a', newline='') as csvfile:
-                    writer = csv.writer(csvfile)
-
-                    # Write the data rows to the CSV
-                    for molecule in molecules:
-                        chembl_id = molecule['molecule_chembl_id']
-                        name = molecule.get('molecule_name', 'N/A')
-                        max_phase = molecule['max_phase']
-                        molecular_formula = molecule['molecule_properties']['full_molformula'] if 'molecule_properties' in molecule and molecule['molecule_properties'] is not None and 'full_molformula' in molecule['molecule_properties'] else 'N/A'
-                        molecular_weight = molecule['molecule_properties']['full_mw'] if 'molecule_properties' in molecule and molecule['molecule_properties'] is not None and 'full_mw' in molecule['molecule_properties'] else 'N/A'
-                        smiles = molecule['molecule_structures']['canonical_smiles'] if molecule['molecule_structures'] is not None and 'canonical_smiles' in molecule['molecule_structures'] else 'N/A'
-                        writer.writerow([chembl_id, name, max_phase, molecular_formula, molecular_weight, smiles])
+                # Append the retrieved data to the all_data list
+                all_data.extend(molecules)
                 
                 page += 1
 
@@ -49,7 +55,34 @@ for chembl_id in chembl_ids:
     except ValueError as ve:
         print(f'Failed to retrieve data for ChEMBL ID: {chembl_id}, JSON Parsing Error: {ve}\n')
 
-# Save the ChEMBL ID, Name, and number of retrieved SMILES to a text file
-with open('viral_protease_stats.txt', 'a') as stats_file:
-    for chembl_id in chembl_ids:
-        stats_file.write(f'ChEMBL ID: {chembl_id}, Number of Retrieved Molecules: {num_molecules}\n')
+# Save all retrieved data as a single CSV file
+output_file = 'data.csv'
+output_file_path = os.path.join(output_dir, output_file)
+with open(output_file_path, 'w', newline='') as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(['ChEMBL ID', 'Name', 'Max Phase', 'Molecular Formula', 'Molecular Weight', 'SMILES'])
+    # Write the retrieved data to the CSV file
+    for molecule in all_data:
+        chembl_id = molecule['molecule_chembl_id']
+        name = molecule.get('molecule_name', 'N/A')
+        max_phase = molecule['max_phase']
+        molecular_formula = molecule['molecule_properties'].get('full_molformula', 'N/A') if 'molecule_properties' in molecule and molecule['molecule_properties'] is not None else 'N/A'
+        molecular_weight = molecule['molecule_properties'].get('full_mw', 'N/A') if 'molecule_properties' in molecule and molecule['molecule_properties'] is not None else 'N/A'
+        smiles = molecule['molecule_structures']['canonical_smiles'] if molecule['molecule_structures'] is not None and 'canonical_smiles'
+
+# Save the ChEMBL ID, Name, and number of retrieved SMILES to a text file in the same directory
+# Specify the output file name and path
+output_file_path = os.path.join(output_dir, 'stats.txt')
+
+# Open the output txt file in write mode
+with open(output_file_path, 'w') as txtfile:
+    txtfile.write(f"ChEMBL ID\tOutput File\tNumber of Retrieved SMILES\n")
+    # Iterate through the rows in the CSV file we created earlier
+    with open(output_file, 'r') as csvfile:
+        reader = csv.reader(csvfile)
+        # Skip the header row
+        next(reader)
+        # Count the number of rows in the CSV file
+        num_rows = sum(1 for row in reader)
+        # Write the statistics to the text file
+        txtfile.write(f"{chembl_id}\t{output_file}\t{num_rows}\n")

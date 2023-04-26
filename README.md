@@ -49,3 +49,8 @@ Alternatively, if you have the `input.txt` file in a **different directory** tha
 python scrape.py /path/to/input.txt
 ```
 Where '/path/to/input.txt' should be replaced with the **actual full path** to the `input.txt` file on your system.
+
+## Future additions:
+- extend error handling
+- dry up some code parts
+- incorporate API throttling
